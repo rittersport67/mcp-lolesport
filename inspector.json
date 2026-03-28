@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "riot": {
+      "command": "/Users/seb/Documents/CodeRepo/mcp-riot/.venv/bin/python",
+      "args": ["/Users/seb/Documents/CodeRepo/mcp-riot/src/server.py"],
+      "env": {
+        "RIOT_API_KEY": "RGAPI-9246c602-b0e8-4d17-a7a8-202969dcb688",
+        "MCP_TRANSPORT": "stdio"
+      }
+    }
+  }
+}
