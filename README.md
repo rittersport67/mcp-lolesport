@@ -66,8 +66,8 @@ Returns tournaments with start/end dates, filterable by league.
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/jifrozen0110/mcp-riot.git
-cd mcp-riot
+git clone https://github.com/rittersport67/mcp-lolesport.git
+cd mcp-lolesport
 
 # Install dependencies (using uv)
 uv sync
