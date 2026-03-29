@@ -1,7 +1,6 @@
 import asyncio
 import httpx
 import os
-from typing import Any
 from dotenv import load_dotenv
 
 from server import get_player_summary
