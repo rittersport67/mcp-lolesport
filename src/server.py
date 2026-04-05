@@ -15,7 +15,7 @@ if not RIOT_API_KEY:
 CHAMPION_MAP: dict[str, dict[int, str]] = {}  # language -> {champ_id: name}
 
 # LoL Esports API (unofficial, used by lolesports.com)
-ESPORTS_API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"
+ESPORTS_API_KEY = os.getenv("ESPORTS_API_KEY", "")
 ESPORTS_BASE_URL = "https://esports-api.lolesports.com/persisted/gw"
 
 # Common league slugs -> IDs

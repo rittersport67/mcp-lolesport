@@ -127,6 +127,17 @@ Start the server first (`python src/server.py`), then add to `~/Library/Applicat
 }
 ```
 
+## MCP Inspector
+
+To test tools interactively via the MCP inspector:
+
+```bash
+npx @modelcontextprotocol/inspector --config inspector.json --server riot
+```
+
+- The API key is loaded automatically from `.env` via `load_dotenv()`
+- Open the generated URL in a browser (Chrome or Firefox recommended — Safari may have issues with localhost)
+
 ---
 
 ## Dependencies

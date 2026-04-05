@@ -4,7 +4,6 @@
       "command": "/Users/seb/Documents/CodeRepo/mcp-riot/.venv/bin/python",
       "args": ["/Users/seb/Documents/CodeRepo/mcp-riot/src/server.py"],
       "env": {
-        "RIOT_API_KEY": "your_api_key_here",
         "MCP_TRANSPORT": "stdio"
       }
     }
