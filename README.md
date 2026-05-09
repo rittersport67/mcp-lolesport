@@ -1,11 +1,10 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/jifrozen0110-mcp-riot-badge.png)](https://mseep.ai/app/jifrozen0110-mcp-riot)
-
 [![smithery badge](https://smithery.ai/badge/@jifrozen0110/riot)](https://smithery.ai/server/@jifrozen0110/riot)
+
 # MCP Riot Server
 
 **MCP-Riot is a community-developed [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) server that integrates with the Riot Games API** to provide League of Legends data to AI assistants via natural language queries.
 
-This project enables AI models to retrieve player information, ranked stats, champion mastery, and recent match summaries.
+This project enables AI models to retrieve player information, ranked stats, champion mastery, recent match summaries, and LoL esports data.
 
 > **Disclaimer:** This is an open-source project *not affiliated with or endorsed by Riot Games.* League of Legends® is a registered trademark of Riot Games, Inc.
 
@@ -43,7 +42,22 @@ Lists recent matches including champion used, K/D/A, and result.
 ### 📊 Match Summary
 > "Summarize this match for a given match ID"
 
-Returns the player’s match stats, such as KDA, damage, wards, and result.
+Returns the player's match stats, such as KDA, damage, wards, and result.
+
+### 🗓️ Esports Schedule
+> "What are the upcoming LCK matches?"
+
+Returns upcoming and live competitive matches, filterable by league.
+
+### 🛡️ Esports Teams & Players
+> "Who are the players on T1?"
+
+Returns professional team rosters and team lists, filterable by league.
+
+### 🏆 Esports Tournaments
+> "What tournaments are happening in the LPL?"
+
+Returns tournaments with start/end dates, filterable by league.
 
 ---
 
@@ -52,95 +66,109 @@ Returns the player’s match stats, such as KDA, damage, wards, and result.
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/jifrozen0110/mcp-riot.git
-cd mcp-riot
+git clone https://github.com/rittersport67/mcp-lolesport.git
+cd mcp-lolesport
 
-# Install dependencies (using uv or pip)
+# Install dependencies (using uv)
 uv sync
 ```
 
-
 ### 2. Get Your API Key and Set Environment
 
-Create `.env` file with your Riot API key:
+Create a `.env` file with your Riot API key:
 
 ```ini
 RIOT_API_KEY=your_riot_api_key
 ```
+
 You can get your key from https://developer.riotgames.com/
 
+### 3. Run the Server
 
-### 3. Configure MCP Client
+```bash
+python src/server.py
+```
 
-Register this server in your MCP client (e.g., Claude for Desktop).
+The server starts in StreamableHTTP mode on `http://localhost:8000/mcp` by default.
 
-Edit ~/Library/Application Support/Claude/claude_desktop_config.json:
+To run in stdio mode:
+```bash
+MCP_TRANSPORT=stdio python src/server.py
+```
 
-``` bash
+### 4. Configure MCP Client
+
+#### Option A — StreamableHTTP (recommended)
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
 {
-    "mcpServers": {
-        "amadeus": {
-            "command": "/ABSOLUTE/PATH/TO/PARENT/FOLDER/uv",
-            "args": [
-                "--directory",
-                "/ABSOLUTE/PATH/TO/PARENT/FOLDER",
-                "run",
-                "--env-file",
-                "/ABSOLUTE/PATH/TO/PARENT/FOLDER/.env",
-                "riot.py"
-            ]
-        }
+  "mcpServers": {
+    "riot": {
+      "url": "http://localhost:8000/mcp"
     }
+  }
 }
 ```
 
-> Replace `/ABSOLUTE/PATH/TO/PARENT/FOLDER/` with the actual path to your project folder.
+#### Option B — stdio
 
-my case:
-
-``` bash
+```json
 {
-    "mcpServers": {
-        "amadeus": {
-            "command": "/Users/jifrozen/.local/bin/uv",
-            "args": [
-                "--directory",
-                "/Users/jifrozen/mcp-riot/src/",
-                "run",
-                "--env-file",
-                "/Users/jifrozen/mcp-riot/.env",
-                "server.py"
-            ]
-        }
+  "mcpServers": {
+    "riot": {
+      "command": "/ABSOLUTE/PATH/TO/uv",
+      "args": [
+        "--directory", "/ABSOLUTE/PATH/TO/mcp-riot",
+        "run",
+        "--env-file", "/ABSOLUTE/PATH/TO/mcp-riot/.env",
+        "server.py"
+      ]
     }
+  }
 }
-
 ```
+
+> Replace `/ABSOLUTE/PATH/TO/` with the actual paths on your system.
 
 ---
+
 ## 🛠️ Tools
 
-The following tools will be exposed to MCP clients:
+### Player Tools
 
-### `get_player_summary`
-
+#### `get_player_summary`
 Summarizes level, rank, top champions, and recent matches.
 
-### `get_top_champions_tool`
-
+#### `get_top_champions_tool`
 Returns top champions by mastery points.
 
-### `get_champion_mastery_tool`
-
+#### `get_champion_mastery_tool`
 Returns mastery details for a specific champion.
 
-### `get_recent_matches_tool`
-
+#### `get_recent_matches_tool`
 Returns recent matches for the given summoner.
 
-### `get_match_summary`
-
+#### `get_match_summary`
 Returns match performance stats for a given match ID and puuid.
+
+### Esports Tools
+
+#### `get_upcoming_esport_matches`
+Returns upcoming and live competitive matches.
+Filter by league slug: `lck`, `lec`, `lcs`, `lpl`, `worlds`, `msi`, `cblol`, `pcs`, `vcs`, `ljl`
+
+#### `get_esport_teams`
+Returns professional teams with their region, code, and slug.
+Optionally filter by league slug.
+
+#### `get_esport_players`
+Returns the current roster of a professional team by team slug.
+
+#### `get_esport_tournaments`
+Returns tournaments with start/end dates and IDs.
+Optionally filter by league slug.
 
 ---
 

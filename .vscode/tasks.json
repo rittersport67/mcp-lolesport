@@ -1,0 +1,82 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "_server",
+      "type": "shell",
+      "command": "uv run python src/server.py",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "close": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Started server process.*$",
+          "endsPattern": "^.*Application startup complete.*$"
+        }
+      }
+    },
+    {
+      "label": "_inspector",
+      "type": "shell",
+      "command": "npx @modelcontextprotocol/inspector --config inspector.json --server riot",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "close": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Proxy Server.*$",
+          "endsPattern": "^.*Open inspector.*$"
+        }
+      }
+    },
+    {
+      "label": "Start MCP Debug",
+      "dependsOrder": "sequence",
+      "dependsOn": ["_server", "_inspector"],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Stop MCP Debug",
+      "type": "shell",
+      "command": "lsof -ti :8000 | xargs kill -9 2>/dev/null; lsof -ti :6277 | xargs kill -9 2>/dev/null; pkill -f 'python.*server.py' 2>/dev/null; pkill -f 'modelcontextprotocol' 2>/dev/null; sleep 2; echo 'Stopped'",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Restart MCP Debug",
+      "dependsOrder": "sequence",
+      "dependsOn": ["Stop MCP Debug", "Start MCP Debug"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}

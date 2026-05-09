@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mcp-riot",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "python", "src/server.py"],
+      "cwd": "/Users/seb/Documents/CodeRepo/mcp-riot",
+      "port": 8000
+    }
+  ]
+}
