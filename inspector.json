@@ -1,11 +1,7 @@
 {
   "mcpServers": {
     "riot": {
-      "command": "/Users/seb/Documents/CodeRepo/mcp-riot/.venv/bin/python",
-      "args": ["/Users/seb/Documents/CodeRepo/mcp-riot/src/server.py"],
-      "env": {
-        "MCP_TRANSPORT": "stdio"
-      }
+      "url": "http://localhost:8000/mcp"
     }
   }
 }

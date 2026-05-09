@@ -89,7 +89,7 @@ You can get your key from https://developer.riotgames.com/
 python src/server.py
 ```
 
-The server starts in SSE mode on `http://localhost:8000` by default.
+The server starts in StreamableHTTP mode on `http://localhost:8000/mcp` by default.
 
 To run in stdio mode:
 ```bash
@@ -98,7 +98,7 @@ MCP_TRANSPORT=stdio python src/server.py
 
 ### 4. Configure MCP Client
 
-#### Option A — SSE (recommended)
+#### Option A — StreamableHTTP (recommended)
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
@@ -106,7 +106,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "riot": {
-      "url": "http://localhost:8000/sse"
+      "url": "http://localhost:8000/mcp"
     }
   }
 }

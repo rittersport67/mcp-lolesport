@@ -13,8 +13,8 @@ MCP-Riot is a [Model Context Protocol (MCP)](https://github.com/modelcontextprot
 ```
 mcp-riot/
 ├── src/
-│   └── server.py       # Main MCP server — all tools defined here
-├── .env                # API key (not committed)
+│   └── server.py       # Main MCP server — all tools, prompts, and schemas defined here
+├── .env                # API keys (not committed)
 ├── .env.example        # Template for .env
 ├── pyproject.toml      # Python project config (uv)
 └── uv.lock             # Lockfile
@@ -23,7 +23,7 @@ mcp-riot/
 **Entry point:** `src/server.py`
 **Framework:** [`FastMCP`](https://github.com/modelcontextprotocol/python-sdk) from `mcp[cli]`
 **HTTP client:** `httpx` (async)
-**Transport:** SSE (default, port 8000) or stdio (set via `MCP_TRANSPORT` env var)
+**Transport:** StreamableHTTP (default, port 8000, `/mcp`) or stdio (set via `MCP_TRANSPORT` env var)
 
 ---
 
@@ -32,7 +32,8 @@ mcp-riot/
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `RIOT_API_KEY` | Yes | Riot Games API key from https://developer.riotgames.com/ |
-| `MCP_TRANSPORT` | No | `sse` (default) or `stdio` |
+| `ESPORTS_API_KEY` | Yes | LoL Esports API key (public key used by lolesports.com) |
+| `MCP_TRANSPORT` | No | `streamable-http` (default) or `stdio` |
 
 ---
 
@@ -52,26 +53,43 @@ mcp-riot/
 
 | Tool | Description |
 |------|-------------|
-| `get_upcoming_esport_matches` | Upcoming/live competitive matches, filterable by league |
-| `get_esport_teams` | Professional teams list, filterable by league |
-| `get_esport_players` | Roster for a specific team (by team slug) |
-| `get_esport_tournaments` | Tournaments with dates and IDs, filterable by league |
+| `get_upcoming_esport_matches` | Upcoming/live competitive matches, filterable by `league` |
+| `get_esport_teams` | Professional teams list, filterable by `league` |
+| `get_esport_players` | Roster for a specific team (by `team` identifier) |
+| `get_esport_tournaments` | Tournaments with dates and IDs, filterable by `league` |
 
-**Supported league slugs:** `lck`, `lec`, `lcs`, `lpl`, `worlds`, `msi`, `cblol`, `ljl`, `vcs`, `pcs`
+**Supported league values:** `lck`, `lec`, `lcs`, `lpl`, `worlds`, `msi`, `cblol`, `ljl`, `vcs`, `pcs`
+
+### Parameter conventions
+- `league` — league identifier used across all esport tools
+- `team` — team identifier used in `get_esport_players` (e.g. `t1`, `cloud9`, `fnatic`, `g2-esports`)
+- `game_name` + `tag_line` — Riot ID components (e.g. `Faker` + `T1`)
+- `region` — server region code: `kr`, `jp`, `euw`, `eune`, `na`, `br`, `lan`, `las`, `tr`, `ru`, `oce`
+
+---
+
+## MCP Prompts
+
+| Prompt | Parameters | Description |
+|--------|------------|-------------|
+| `analyze_player` | `game_name`, `tag_line`, `region` | Full player analysis combining summary, top champions, and recent matches |
+| `preview_competition` | `league` | Upcoming matches for a league with team rosters |
+| `scout_team` | `team` | Detailed roster breakdown for a specific team |
 
 ---
 
 ## Key Implementation Details
 
 ### Riot API
-- Region routing: account lookup → `asia.api.riotgames.com`, summoner/match → `kr.api.riotgames.com`
+- Region routing: account lookup → `asia.api.riotgames.com`, summoner/match → region-specific server
 - Authentication: `X-Riot-Token` header
 - Champion names resolved via Data Dragon (`ddragon.leagueoflegends.com`) — cached per language in `CHAMPION_MAP`
 
 ### Esports API
 - Base URL: `https://esports-api.lolesports.com/persisted/gw`
-- Authentication: hardcoded public key (`x-api-key` header) — this is the same key used by the lolesports.com website
-- League resolution: slug → ID via `ESPORTS_LEAGUE_IDS` map or live API call
+- Authentication: `ESPORTS_API_KEY` env var (`x-api-key` header) — public key used by the lolesports.com website
+- League resolution: `league` identifier → ID via `ESPORTS_LEAGUE_IDS` map or live API call
+- Filtering: done at API level (via `leagueId` param) and client-side on the response
 
 ### Player Lookup Flow
 1. `game_name` + `tag_line` → `get_puuid()` → PUUID
@@ -85,11 +103,11 @@ mcp-riot/
 # Install dependencies
 uv sync
 
-# Set API key
+# Set API keys
 cp .env.example .env
-# Edit .env and add your RIOT_API_KEY
+# Edit .env and add your RIOT_API_KEY and ESPORTS_API_KEY
 
-# Run SSE server (default, port 8000)
+# Run StreamableHTTP server (default, port 8000, endpoint /mcp)
 python src/server.py
 
 # Or run as stdio server
@@ -98,13 +116,13 @@ MCP_TRANSPORT=stdio python src/server.py
 
 ## MCP Client Configuration
 
-### Claude Desktop (SSE mode)
+### Claude Desktop (StreamableHTTP mode)
 Start the server first (`python src/server.py`), then add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "riot": {
-      "url": "http://localhost:8000/sse"
+      "url": "http://localhost:8000/mcp"
     }
   }
 }
@@ -135,14 +153,15 @@ To test tools interactively via the MCP inspector:
 npx @modelcontextprotocol/inspector --config inspector.json --server riot
 ```
 
-- The API key is loaded automatically from `.env` via `load_dotenv()`
+- API keys are loaded automatically from `.env` via `load_dotenv()`
 - Open the generated URL in a browser (Chrome or Firefox recommended — Safari may have issues with localhost)
+- Optional parameters must be explicitly activated in the inspector form before submitting
 
 ---
 
 ## Dependencies
 
-- `mcp[cli] >= 1.6.0` — MCP server framework
+- `mcp[cli] >= 1.9.0` — MCP server framework
 - `httpx >= 0.28.1` — async HTTP client
 - `python-dotenv >= 1.0.0` — `.env` file loading
 - Python `>= 3.13`
