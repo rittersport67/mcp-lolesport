@@ -1,4 +1,5 @@
 from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.transport_security import TransportSecuritySettings
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 import asyncio
@@ -126,7 +127,17 @@ async def lifespan(server):
     yield
 
 
-mcp = FastMCP("riot", lifespan=lifespan)
+_extra_hosts = [h for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h]
+_extra_origins = [o for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o]
+
+mcp = FastMCP("riot",
+    lifespan=lifespan,
+    stateless_http=True,
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=["localhost:8000", "127.0.0.1:8000"] + _extra_hosts,
+        allowed_origins=_extra_origins,
+    ))
 
 
 @mcp.prompt()
@@ -193,15 +204,9 @@ def scout_team(team: str) -> str:
     """
 
 
-@mcp.tool()
-async def is_alive() -> HealthStatus:
-    """
-    🩺 Check connectivity to all upstream dependencies.
-
-    Returns the status of each service (Riot API, LoL Esports API, Data Dragon CDN)
-    along with their HTTP status code and response latency in milliseconds.
-    Use this to verify the server is healthy before calling other tools.
-    """
+@mcp.resource("health://status")
+async def health_status() -> str:
+    """🩺 Connectivity status for all upstream dependencies (Riot API, Esports API, Data Dragon)."""
     import time
     checks: dict[str, DependencyCheck] = {}
 
@@ -224,7 +229,7 @@ async def is_alive() -> HealthStatus:
                 checks[name] = DependencyCheck(ok=False, error=str(e))
 
     status = "degraded" if any(not c.ok for c in checks.values()) else "ok"
-    return HealthStatus(status=status, checks=checks)
+    return HealthStatus(status=status, checks=checks).model_dump_json(indent=2)
 
 RIOT_API_KEY = os.getenv("RIOT_API_KEY")
 if not RIOT_API_KEY:
