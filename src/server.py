@@ -1,7 +1,7 @@
 from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.transport_security import TransportSecuritySettings
 from contextlib import asynccontextmanager
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import asyncio
 import httpx
 import json
@@ -15,109 +15,131 @@ load_dotenv()
 # --- Output schemas ---
 
 class DependencyCheck(BaseModel):
-    ok: bool
-    status_code: int | None = None
-    latency_ms: int | None = None
-    error: str | None = None
+    ok: bool = Field(description="Whether the dependency is reachable and healthy")
+    status_code: int | None = Field(default=None, description="HTTP status code returned by the health check")
+    latency_ms: int | None = Field(default=None, description="Round-trip latency in milliseconds")
+    error: str | None = Field(default=None, description="Error message if the check failed")
 
 class HealthStatus(BaseModel):
-    status: str
-    checks: dict[str, DependencyCheck]
+    status: str = Field(description="Overall server health: 'healthy', 'degraded', or 'unhealthy'")
+    checks: dict[str, DependencyCheck] = Field(description="Health check result per dependency (riot_api, esports_api, ddragon)")
+    unavailable_tools: list[str] = Field(default=[], description="Tools that are unavailable due to failed dependencies")
+
+TOOL_DEPENDENCIES: dict[str, list[str]] = {
+    "riot_api": [
+        "get_player_summary",
+        "get_top_champions_tool",
+        "get_champion_mastery_tool",
+        "get_recent_matches_tool",
+        "get_match_summary",
+    ],
+    "esports_api": [
+        "get_upcoming_esport_matches",
+        "get_esport_teams",
+        "get_esport_players",
+        "get_esport_tournaments",
+    ],
+    "ddragon": [
+        "get_player_summary",
+        "get_top_champions_tool",
+        "get_champion_mastery_tool",
+    ],
+}
 
 class RankInfo(BaseModel):
-    tier: str
-    rank: str
-    lp: int
-    wins: int
-    losses: int
-    winrate: int
+    tier: str = Field(description="Rank tier (e.g. GOLD, PLATINUM, DIAMOND)")
+    rank: str = Field(description="Division within the tier (e.g. I, II, III, IV)")
+    lp: int = Field(description="League Points within the current division")
+    wins: int = Field(description="Total wins in ranked this season")
+    losses: int = Field(description="Total losses in ranked this season")
+    winrate: int = Field(description="Win rate as a percentage (0–100)")
 
 class ChampionMastery(BaseModel):
-    champion: str
-    champion_id: int
-    level: int
-    points: int
+    champion: str = Field(description="Champion name")
+    champion_id: int = Field(description="Riot champion ID")
+    level: int = Field(description="Mastery level (1–7)")
+    points: int = Field(description="Total mastery points earned on this champion")
 
 class RecentMatch(BaseModel):
-    match_id: str
-    champion: str
-    kills: int
-    deaths: int
-    assists: int
-    win: bool
+    match_id: str = Field(description="Riot match ID (e.g. EUW1_1234567890)")
+    champion: str = Field(description="Champion played in this match")
+    kills: int = Field(description="Number of kills")
+    deaths: int = Field(description="Number of deaths")
+    assists: int = Field(description="Number of assists")
+    win: bool = Field(description="True if the player's team won")
 
 class PlayerSummary(BaseModel):
-    game_name: str
-    tag_line: str
-    level: int
-    rank: RankInfo | None
-    top_champions: list[ChampionMastery]
-    recent_matches: list[RecentMatch]
+    game_name: str = Field(description="Riot ID game name (e.g. Faker)")
+    tag_line: str = Field(description="Riot ID tag line (e.g. T1)")
+    level: int = Field(description="Summoner level")
+    rank: RankInfo | None = Field(description="Solo/Duo ranked info, null if unranked")
+    top_champions: list[ChampionMastery] = Field(description="Top champions by mastery points")
+    recent_matches: list[RecentMatch] = Field(description="Most recent matches")
 
 class EsportMatch(BaseModel):
-    start_time: str | None
-    state: str | None
-    league: str | None
-    league_slug: str | None
-    block: str | None
-    team1: str | None
-    team2: str | None
-    match_id: str | None
+    start_time: str | None = Field(default=None, description="ISO 8601 start time of the match")
+    state: str | None = Field(default=None, description="Match state: 'unstarted', 'inProgress', or 'completed'")
+    league: str | None = Field(default=None, description="League display name (e.g. LCK, LEC)")
+    league_slug: str | None = Field(default=None, description="League identifier slug (e.g. lck, lec)")
+    block: str | None = Field(default=None, description="Block or week name within the tournament")
+    team1: str | None = Field(default=None, description="Name of the first team")
+    team2: str | None = Field(default=None, description="Name of the second team")
+    match_id: str | None = Field(default=None, description="Esports match ID")
 
 class EsportTeam(BaseModel):
-    name: str | None
-    code: str | None
-    slug: str | None
-    league: str | None
+    name: str | None = Field(default=None, description="Full team name (e.g. T1, Fnatic)")
+    code: str | None = Field(default=None, description="Short team code (e.g. T1, FNC)")
+    slug: str | None = Field(default=None, description="URL-friendly team identifier (e.g. t1, fnatic)")
+    league: str | None = Field(default=None, description="League the team competes in")
 
 class EsportPlayer(BaseModel):
-    summoner_name: str | None
-    role: str | None
-    first_name: str | None
-    last_name: str | None
+    summoner_name: str | None = Field(default=None, description="Player's in-game name")
+    role: str | None = Field(default=None, description="Role: top, jungle, mid, bottom, support")
+    first_name: str | None = Field(default=None, description="Player's real first name")
+    last_name: str | None = Field(default=None, description="Player's real last name")
 
 class EsportTeamRoster(BaseModel):
-    name: str | None
-    code: str | None
-    slug: str | None
-    league: str | None
-    players: list[EsportPlayer]
+    name: str | None = Field(default=None, description="Full team name")
+    code: str | None = Field(default=None, description="Short team code")
+    slug: str | None = Field(default=None, description="URL-friendly team identifier")
+    league: str | None = Field(default=None, description="League the team competes in")
+    players: list[EsportPlayer] = Field(description="List of players on the roster")
 
 class EsportTournament(BaseModel):
-    name: str | None
-    slug: str | None
-    id: str | None
-    start_date: str | None
-    end_date: str | None
+    name: str | None = Field(default=None, description="Tournament display name")
+    slug: str | None = Field(default=None, description="URL-friendly tournament identifier")
+    id: str | None = Field(default=None, description="Esports tournament ID")
+    start_date: str | None = Field(default=None, description="Tournament start date (YYYY-MM-DD)")
+    end_date: str | None = Field(default=None, description="Tournament end date (YYYY-MM-DD)")
 
 class ChampionMasteryDetail(BaseModel):
-    game_name: str
-    tag_line: str
-    champion_name: str
-    champion_id: int
-    level: int
-    points: int
-    last_play_time: int | None = None
-    tokens_earned: int | None = None
+    game_name: str = Field(description="Riot ID game name")
+    tag_line: str = Field(description="Riot ID tag line")
+    champion_name: str = Field(description="Champion name")
+    champion_id: int = Field(description="Riot champion ID")
+    level: int = Field(description="Mastery level (1–7)")
+    points: int = Field(description="Total mastery points on this champion")
+    last_play_time: int | None = Field(default=None, description="Unix timestamp (ms) of the last game played on this champion")
+    tokens_earned: int | None = Field(default=None, description="Mastery tokens earned toward the next level upgrade")
 
 class MatchSummary(BaseModel):
-    champion: str
-    lane: str
-    role: str
-    kills: int
-    deaths: int
-    assists: int
-    kda: float | None
-    kill_participation: float | None
-    damage_dealt: int
-    vision_score: int
-    wards_placed: int
-    wards_killed: int
-    win: bool
-    position: str | None
-    time_played: int
-    game_duration: int
-    queue_id: int
+    champion: str = Field(description="Champion played")
+    lane: str = Field(description="Lane assignment from Riot (e.g. TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY)")
+    role: str = Field(description="Role from Riot (e.g. SOLO, CARRY, SUPPORT)")
+    kills: int = Field(description="Number of kills")
+    deaths: int = Field(description="Number of deaths")
+    assists: int = Field(description="Number of assists")
+    kda: float | None = Field(default=None, description="KDA ratio: (kills + assists) / max(deaths, 1)")
+    kill_participation: float | None = Field(default=None, description="Fraction of team kills the player was involved in (0.0–1.0)")
+    damage_dealt: int = Field(description="Total damage dealt to champions")
+    vision_score: int = Field(description="Vision score for the game")
+    wards_placed: int = Field(description="Number of wards placed")
+    wards_killed: int = Field(description="Number of enemy wards destroyed")
+    win: bool = Field(description="True if the player's team won")
+    position: str | None = Field(default=None, description="Detected position (e.g. TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY)")
+    time_played: int = Field(description="Seconds the player was alive during the game")
+    game_duration: int = Field(description="Total game duration in seconds")
+    queue_id: int = Field(description="Riot queue ID (e.g. 420 = Ranked Solo/Duo, 450 = ARAM)")
 
 
 @asynccontextmanager
@@ -228,8 +250,13 @@ async def health_status() -> str:
             except Exception as e:
                 checks[name] = DependencyCheck(ok=False, error=str(e))
 
+    unavailable: set[str] = set()
+    for dep, check in checks.items():
+        if not check.ok:
+            unavailable.update(TOOL_DEPENDENCIES.get(dep, []))
+
     status = "degraded" if any(not c.ok for c in checks.values()) else "ok"
-    return HealthStatus(status=status, checks=checks).model_dump_json(indent=2)
+    return HealthStatus(status=status, checks=checks, unavailable_tools=sorted(unavailable)).model_dump_json(indent=2)
 
 RIOT_API_KEY = os.getenv("RIOT_API_KEY")
 if not RIOT_API_KEY:
